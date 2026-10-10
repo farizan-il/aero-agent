@@ -4,7 +4,9 @@ from pathlib import Path
 import streamlit as st
 from langchain_core.messages import HumanMessage, AIMessage
 
+import importlib
 from src import config
+importlib.reload(config)
 from src.agent import build_agent, extract_text_content
 from src.rag import rag_engine
 from src.qa_runner import QARunner
@@ -101,7 +103,8 @@ with tab_chat:
             status_container = st.status("Aero Agent sedang memproses...", expanded=False)
 
             try:
-                models_to_try = [config.GEMINI_MODEL] + [m for m in config.FALLBACK_MODELS if m != config.GEMINI_MODEL]
+                fallback_candidates = getattr(config, "FALLBACK_MODELS", ["gemini-3.5-flash", "gemini-flash-latest"])
+                models_to_try = [config.GEMINI_MODEL] + [m for m in fallback_candidates if m != config.GEMINI_MODEL]
                 executed = False
                 final_content = ""
 

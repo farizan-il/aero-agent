@@ -74,7 +74,8 @@ KEMBALIKAN HANYA ARRAY JSON VALID TANPA MARKDOWN LAIN. Format setiap objek:
 ]
 """
 
-        models_to_try = [config.GEMINI_MODEL] + [m for m in config.FALLBACK_MODELS if m != config.GEMINI_MODEL]
+        fallback_list = getattr(config, "FALLBACK_MODELS", ["gemini-3.5-flash", "gemini-flash-latest"])
+        models_to_try = [config.GEMINI_MODEL] + [m for m in fallback_list if m != config.GEMINI_MODEL]
 
         for candidate_model in models_to_try:
             try:
