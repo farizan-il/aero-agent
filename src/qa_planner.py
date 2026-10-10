@@ -31,12 +31,6 @@ class QAPlanner:
         if not config.GEMINI_API_KEY:
             return cls._get_default_multi_persona_plan(page_inspection, selected_personas)
 
-        llm = ChatGoogleGenerativeAI(
-            model=config.GEMINI_MODEL,
-            google_api_key=config.GEMINI_API_KEY,
-            temperature=0.25,
-        )
-
         prompt = f"""Anda adalah Principal QA Automation Architect (Aero AI Lead).
 Tugas Anda adalah merancang matriks pengujian (Test Suite) yang SANGAT DETAIL, REALISTIS, 
 dan merefleksikan variasi perilaku manusia nyata saat menggunakan sistem website ini.
@@ -80,22 +74,30 @@ KEMBALIKAN HANYA ARRAY JSON VALID TANPA MARKDOWN LAIN. Format setiap objek:
 ]
 """
 
-        try:
-            response = llm.invoke([HumanMessage(content=prompt)])
-            cleaned = extract_text_content(response.content).strip()
-            if cleaned.startswith("```json"):
-                cleaned = cleaned[7:]
-            if cleaned.startswith("```"):
-                cleaned = cleaned[3:]
-            if cleaned.endswith("```"):
-                cleaned = cleaned[:-3]
-            cleaned = cleaned.strip()
+        models_to_try = [config.GEMINI_MODEL] + [m for m in config.FALLBACK_MODELS if m != config.GEMINI_MODEL]
 
-            scenarios = json.loads(cleaned)
-            if isinstance(scenarios, list) and len(scenarios) >= 4:
-                return scenarios
-        except Exception as e:
-            print(f"Warning: AI persona test plan generation fallback: {e}")
+        for candidate_model in models_to_try:
+            try:
+                llm = ChatGoogleGenerativeAI(
+                    model=candidate_model,
+                    google_api_key=config.GEMINI_API_KEY,
+                    temperature=0.25,
+                )
+                response = llm.invoke([HumanMessage(content=prompt)])
+                cleaned = extract_text_content(response.content).strip()
+                if cleaned.startswith("```json"):
+                    cleaned = cleaned[7:]
+                if cleaned.startswith("```"):
+                    cleaned = cleaned[3:]
+                if cleaned.endswith("```"):
+                    cleaned = cleaned[:-3]
+                cleaned = cleaned.strip()
+
+                scenarios = json.loads(cleaned)
+                if isinstance(scenarios, list) and len(scenarios) >= 4:
+                    return scenarios
+            except Exception:
+                continue
 
         return cls._get_default_multi_persona_plan(page_inspection, selected_personas)
 
