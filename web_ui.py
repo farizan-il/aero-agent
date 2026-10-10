@@ -125,18 +125,35 @@ with tab_chat:
 # TAB 2: WEB QA AUTOMATION STUDIO
 # ==========================================
 with tab_qa:
-    st.subheader("🧪 Autonomous Web QA / QC Engine")
-    st.write("Aero akan membuka website target, mempelajari struktur halamannya, merancang test matrix dengan berbagai skenario end-user, dan mencetak laporan audit lengkap.")
+    st.subheader("🧪 Autonomous Multi-Persona Web QA Studio")
+    st.write("Aero menyimulasikan berbagai tipe perilaku manusia nyata saat menggunakan sistem: dari pengguna biasa, pengguna terburu-buru yang suka spam klik, pengguna ceroboh, hingga penguji celah keamanan dan pengguna smartphone.")
 
     col1, col2 = st.columns([3, 1])
     with col1:
         target_url = st.text_input("URL Website Target", placeholder="https://example.com atau localhost")
     with col2:
-        browser_mode = st.selectbox("Mode Browser", ["Headless (Latar Belakang)", "Tampilkan Browser (Visual)"])
+        browser_mode = st.selectbox("Mode Tampilan Browser", ["Headless (Latar Belakang)", "Tampilkan Browser (Visual)"])
+
+    # Pilihan Persona Pengguna
+    st.markdown("#### 👥 Pilih Persona Perilaku Pengguna untuk Diuji:")
+    persona_options = {
+        "NORMAL": "🟢 Normal / Ideal (Happy Path & valid flow)",
+        "IMPATIENT": "⚡ Impatient (Rage clicker / Double submit spam)",
+        "CLUELESS": "🤷 Clueless (Typo, salah format, spasi saja, form kosong)",
+        "ADVERSARIAL": "🛡️ Adversarial (Batas teks 1200+ char, XSS sanitasi probe)",
+        "MOBILE": "📱 Mobile User (Viewport iPhone 15 & overflow bug check)",
+    }
+    selected_personas = st.multiselect(
+        "Persona Aktif:",
+        options=list(persona_options.keys()),
+        default=list(persona_options.keys()),
+        format_func=lambda x: persona_options[x],
+        help="Aero akan mengeksekusi skenario khusus berdasarkan kebiasaan setiap persona.",
+    )
 
     # Opsi Autentikasi / Login Handshake
     with st.expander("🔐 Pengaturan Izin Autentikasi (Jika Website Butuh Login)"):
-        st.info("Aero tidak akan mengakses akun tanpa izin. Jika website membutuhkan login, berikan kredensial uji coba di bawah ini.")
+        st.info("Aero tidak akan mengakses data privat tanpa izin. Berikan akun uji jika halaman dilindungi login.")
         need_auth = st.checkbox("Website ini memerlukan login untuk diuji")
         auth_creds = None
         if need_auth:
@@ -149,12 +166,14 @@ with tab_qa:
                 auth_creds = {"username": auth_username, "password": auth_password}
 
     # Konteks Spesifikasi Tambahan
-    with st.expander("📝 Catatan / Fokus Pengujian Khusus (Opsional)"):
-        custom_spec = st.text_area("Instruksi atau fokus workflow spesifik (misal: 'Uji alur pendaftaran dan validasi form input')")
+    with st.expander("📝 Fokus Alur Kerja Khusus (Opsional)"):
+        custom_spec = st.text_area("Instruksi atau fokus workflow spesifik (misal: 'Fokus uji checkout keranjang belanja dan kolom voucher')")
 
-    if st.button("🚀 Mulai Siklus Pengujian QA Otonom", type="primary"):
+    if st.button("🚀 Mulai Siklus Pengujian Multi-Persona", type="primary"):
         if not target_url.strip():
             st.warning("⚠️ Masukkan URL target terlebih dahulu.")
+        elif not selected_personas:
+            st.warning("⚠️ Pilih minimal satu persona pengguna.")
         else:
             is_headless = "Headless" in browser_mode
             qa_runner = QARunner(headless=is_headless)
@@ -166,9 +185,10 @@ with tab_qa:
                 progress_bar.progress(pct)
                 status_text.info(f"⏳ {msg}")
 
-            with st.spinner("Menjalankan QA Automation Cycle..."):
+            with st.spinner("Aero sedang menjalankan simulasi multi-persona di browser..."):
                 qa_result = qa_runner.run_qa_cycle(
                     url=target_url.strip(),
+                    active_persona_codes=selected_personas,
                     spec_context=custom_spec,
                     auth_credentials=auth_creds,
                     progress_callback=update_progress,
@@ -179,9 +199,9 @@ with tab_qa:
             if not qa_result.get("success"):
                 st.error(f"❌ Pengujian gagal: {qa_result.get('error')}")
             else:
-                status_text.success("✅ Seluruh siklus pengujian QA selesai dieksekusi!")
+                status_text.success("✅ Seluruh siklus pengujian multi-persona selesai dieksekusi!")
 
-                # Kartu Metrik
+                # Kartu Metrik Utama
                 m1, m2, m3, m4 = st.columns(4)
                 m1.metric("Skor Lulus (Pass Rate)", f"{qa_result.get('pass_rate', 0)}%")
                 m2.metric("Total Skenario Diuji", qa_result.get("total_cases", 0))
@@ -190,24 +210,64 @@ with tab_qa:
 
                 st.markdown("---")
 
-                # Hasil Skenario End-User
-                st.subheader("📋 Rincian Hasil Eksekusi Skenario")
+                # Kartu Web Vitals & Keamanan
+                c_vitals, c_sec, c_a11y = st.columns(3)
+                with c_vitals:
+                    perf = qa_result.get("performance_metrics", {})
+                    st.markdown("##### ⚡ Core Web Vitals")
+                    st.write(f"• **Waktu Load:** `{perf.get('load_time_ms', 0)} ms`")
+                    st.write(f"• **TTFB:** `{perf.get('ttfb_ms', 0)} ms`")
+                    st.write(f"• **Ukuran Transfer:** `{perf.get('transfer_size_kb', 0)} KB`")
+
+                with c_sec:
+                    sec = qa_result.get("security_audit", {})
+                    st.markdown("##### 🛡️ Skor Keamanan Header")
+                    sec_score = sec.get("security_score", 0)
+                    st.write(f"• **Skor:** `{sec_score} / 100`")
+                    st.write(f"• **HTTPS:** `{'✅ Aktif' if sec.get('is_https') else '❌ Non-HTTPS'}`")
+                    st.write(f"• **CSP Header:** `{'✅ Ada' if sec.get('has_csp') else '⚠️ Belum Ada'}`")
+
+                with c_a11y:
+                    a11y = qa_result.get("accessibility_audit", {})
+                    st.markdown("##### ♿ Aksesibilitas (a11y)")
+                    st.write(f"• **Gambar Tanpa Alt:** `{a11y.get('missing_alt_images', 0)} item`")
+                    st.write(f"• **Input Tanpa Label:** `{a11y.get('missing_labels', 0)} item`")
+                    st.write(f"• **Mobile Viewport:** `{'✅ Sesuai' if a11y.get('has_viewport_meta') else '⚠️ Tidak Ada'}`")
+
+                st.markdown("---")
+
+                # Hasil Skenario Multi-Persona
+                st.subheader("📋 Rincian Hasil Pengujian Skenario & Simulasi Persona")
+                filter_status = st.radio("Filter Tampilan Status:", ["Semua", "Hanya Gagal & Warning", "Hanya Berhasil"], horizontal=True)
+
                 for res in qa_result.get("test_results", []):
                     status = res.get("status")
+                    if filter_status == "Hanya Gagal & Warning" and status == "PASS":
+                        continue
+                    if filter_status == "Hanya Berhasil" and status != "PASS":
+                        continue
+
                     badge = "🟢 PASS" if status == "PASS" else ("🟡 WARNING" if status == "WARNING" else "🔴 FAIL")
-                    with st.expander(f"{badge} [{res.get('id')}] {res.get('name')} — Severity: {res.get('severity')}"):
-                        st.write(f"**Kategori:** {res.get('category')}")
-                        st.write(f"**Deskripsi:** {res.get('description')}")
-                        st.write(f"**Kriteria Hasil:** {res.get('expected_result')}")
-                        st.write(f"**Temuan Aktual:** {res.get('notes')}")
+                    persona_tag = f"[{res.get('persona', 'NORMAL')}]"
+
+                    with st.expander(f"{badge} {persona_tag} {res.get('id')} — {res.get('name')} (Severity: {res.get('severity')})"):
+                        st.write(f"**Persona:** `{res.get('persona')}` | **Kategori:** `{res.get('category')}`")
+                        st.write(f"**Tujuan Pengujian:** {res.get('description')}")
+                        st.write(f"**Kriteria Keberhasilan:** {res.get('expected_result')}")
+                        st.write(f"**Hasil & Analisis:** {res.get('notes')}")
+
+                        if res.get("reproduction_code"):
+                            st.markdown("**Kode Reproduksi Bug (Playwright Python):**")
+                            st.code(res.get("reproduction_code"), language="python")
+
                         if res.get("screenshot") and os.path.exists(res.get("screenshot")):
-                            st.image(res.get("screenshot"), caption=f"Bukti Eksekusi: {res.get('id')}")
+                            st.image(res.get("screenshot"), caption=f"Bukti Visual: {res.get('id')}")
 
                 # Laporan Dokumen Lengkap
                 report_md = QAReporter.generate_markdown_report(qa_result)
                 st.markdown("---")
                 st.download_button(
-                    label="📥 Unduh Laporan QA Lengkap (.md)",
+                    label="📥 Unduh Laporan Audit QA Lengkap (.md)",
                     data=report_md,
                     file_name=f"qa_report_{int(uuid.uuid4().hex[:6], 16)}.md",
                     mime="text/markdown",
