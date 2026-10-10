@@ -29,7 +29,7 @@ Panduan Kerja:
 """
 
 
-def build_agent(api_key: Optional[str] = None, model: Optional[str] = None):
+def build_agent(api_key: Optional[str] = None, model: Optional[str] = None, *args, **kwargs):
     """Membangun graph agent LangGraph yang terintegrasi dengan Google Gemini dan Memory checkpointer."""
     key = api_key or config.GEMINI_API_KEY
     if not key:

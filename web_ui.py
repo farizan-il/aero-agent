@@ -5,8 +5,9 @@ import streamlit as st
 from langchain_core.messages import HumanMessage, AIMessage
 
 import importlib
-from src import config
+from src import config, agent
 importlib.reload(config)
+importlib.reload(agent)
 from src.agent import build_agent, extract_text_content
 from src.rag import rag_engine
 from src.qa_runner import QARunner
@@ -107,10 +108,13 @@ with tab_chat:
                 models_to_try = [config.GEMINI_MODEL] + [m for m in fallback_candidates if m != config.GEMINI_MODEL]
                 executed = False
                 final_content = ""
-
                 for candidate_model in models_to_try:
                     try:
-                        agent = build_agent(api_key=active_key, model=candidate_model)
+                        config.GEMINI_MODEL = candidate_model
+                        try:
+                            agent = build_agent(api_key=active_key, model=candidate_model)
+                        except TypeError:
+                            agent = build_agent(api_key=active_key)
                         thread_config = {"configurable": {"thread_id": st.session_state.thread_id}}
 
                         for event in agent.stream(
