@@ -34,12 +34,18 @@ with st.sidebar:
     if api_key_input and api_key_input.strip() != config.GEMINI_API_KEY:
         config.GEMINI_API_KEY = api_key_input.strip()
 
-    selected_model = st.selectbox(
+    model_options = {
+        "gemini-3.5-flash": "gemini-3.5-flash (Direkomendasikan - Kuota Tinggi)",
+        "gemini-flash-latest": "gemini-flash-latest (Stabil)",
+        "gemini-3.8-flash": "gemini-3.8-flash (Batas Kuota 20 Req/Hari)",
+    }
+    selected_model_key = st.selectbox(
         "Model Gemini",
-        ["gemini-3.8-flash", "gemini-2.5-flash"],
+        options=list(model_options.keys()),
+        format_func=lambda k: model_options[k],
         index=0,
     )
-    config.GEMINI_MODEL = selected_model
+    config.GEMINI_MODEL = selected_model_key
 
     st.markdown("---")
     st.subheader("🛠️ Kapabilitas Aero")
@@ -95,27 +101,44 @@ with tab_chat:
             status_container = st.status("Aero Agent sedang memproses...", expanded=False)
 
             try:
-                agent = build_agent(api_key=active_key)
-                thread_config = {"configurable": {"thread_id": st.session_state.thread_id}}
-
+                models_to_try = [config.GEMINI_MODEL] + [m for m in config.FALLBACK_MODELS if m != config.GEMINI_MODEL]
+                executed = False
                 final_content = ""
-                for event in agent.stream(
-                    {"messages": [HumanMessage(content=user_prompt)]},
-                    config=thread_config,
-                    stream_mode="values",
-                ):
-                    messages = event.get("messages", [])
-                    if messages:
-                        latest = messages[-1]
-                        if hasattr(latest, "tool_calls") and latest.tool_calls:
-                            for tc in latest.tool_calls:
-                                status_container.write(f"🔧 Menjalankan tool: `{tc['name']}`")
-                        if isinstance(latest, AIMessage) and latest.content:
-                            final_content = extract_text_content(latest.content)
 
-                status_container.update(label="Selesai!", state="complete", expanded=False)
-                message_placeholder.markdown(final_content)
-                st.session_state.messages.append({"role": "assistant", "content": final_content})
+                for candidate_model in models_to_try:
+                    try:
+                        agent = build_agent(api_key=active_key, model=candidate_model)
+                        thread_config = {"configurable": {"thread_id": st.session_state.thread_id}}
+
+                        for event in agent.stream(
+                            {"messages": [HumanMessage(content=user_prompt)]},
+                            config=thread_config,
+                            stream_mode="values",
+                        ):
+                            messages = event.get("messages", [])
+                            if messages:
+                                latest = messages[-1]
+                                if hasattr(latest, "tool_calls") and latest.tool_calls:
+                                    for tc in latest.tool_calls:
+                                        status_container.write(f"🔧 Menjalankan tool: `{tc['name']}`")
+                                if isinstance(latest, AIMessage) and latest.content:
+                                    final_content = extract_text_content(latest.content)
+
+                        executed = True
+                        break
+                    except Exception as err:
+                        if "429" in str(err) or "RESOURCE_EXHAUSTED" in str(err):
+                            status_container.write(f"⚠️ Kuota model `{candidate_model}` penuh. Beralih otomatis ke model alternatif...")
+                            continue
+                        raise err
+
+                if executed:
+                    status_container.update(label="Selesai!", state="complete", expanded=False)
+                    message_placeholder.markdown(final_content)
+                    st.session_state.messages.append({"role": "assistant", "content": final_content})
+                else:
+                    status_container.update(label="Gagal", state="error", expanded=True)
+                    st.error("Semua model Gemini sedang mencapai batas kuota harian. Silakan coba kembali beberapa saat lagi.")
 
             except Exception as e:
                 status_container.update(label="Terjadi kesalahan", state="error", expanded=True)

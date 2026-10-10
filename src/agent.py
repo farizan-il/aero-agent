@@ -29,14 +29,15 @@ Panduan Kerja:
 """
 
 
-def build_agent(api_key: Optional[str] = None):
+def build_agent(api_key: Optional[str] = None, model: Optional[str] = None):
     """Membangun graph agent LangGraph yang terintegrasi dengan Google Gemini dan Memory checkpointer."""
     key = api_key or config.GEMINI_API_KEY
     if not key:
         raise ValueError("GEMINI_API_KEY belum disetel. Harap masukkan API key di file .env")
 
+    model_name = model or config.GEMINI_MODEL
     llm = ChatGoogleGenerativeAI(
-        model=config.GEMINI_MODEL,
+        model=model_name,
         google_api_key=key,
         temperature=config.AGENT_TEMPERATURE,
     )
