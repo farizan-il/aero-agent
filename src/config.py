@@ -13,7 +13,7 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 # Model Configurations
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
 FALLBACK_MODELS = ["gemini-3.5-flash", "gemini-3.8-flash", "gemini-flash-latest"]
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "models/text-embedding-004")
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "models/gemini-embedding-001")
 AGENT_TEMPERATURE = float(os.getenv("AGENT_TEMPERATURE", "0.3"))
 
 # Paths

@@ -176,6 +176,10 @@ with tab_qa:
             st.warning("⚠️ Pilih minimal satu persona pengguna.")
         else:
             is_headless = "Headless" in browser_mode
+            import importlib
+            import src.qa_runner
+            importlib.reload(src.qa_runner)
+            from src.qa_runner import QARunner
             qa_runner = QARunner(headless=is_headless)
 
             progress_bar = st.progress(0)

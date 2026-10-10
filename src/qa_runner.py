@@ -22,6 +22,7 @@ class QARunner:
         spec_context: str = "",
         auth_credentials: Optional[Dict[str, str]] = None,
         progress_callback: Optional[Callable[[str, int], None]] = None,
+        **kwargs,
     ) -> Dict[str, Any]:
         """Menjalankan siklus pengujian holistik: Discovery, Multi-Persona Simulation, Audit Web Vitals & Security."""
         start_time = time.time()

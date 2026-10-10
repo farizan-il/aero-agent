@@ -5,10 +5,17 @@ from langchain_core.tools import tool
 
 from src.rag import rag_engine
 
+import warnings
+
 try:
-    from duckduckgo_search import DDGS
+    from ddgs import DDGS
 except ImportError:
-    DDGS = None
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        try:
+            from duckduckgo_search import DDGS
+        except ImportError:
+            DDGS = None
 
 
 @tool
