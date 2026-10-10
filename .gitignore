@@ -1,0 +1,21 @@
+# Environment variables & secrets (JANGAN DI-COMMIT)
+.env
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.npz
+
+# Reports & uploads temporary
+reports/screenshots/*.png
+uploads/*
+!uploads/.gitkeep
+
+# macOS
+.DS_Store
